@@ -1,5 +1,6 @@
 package com.mert.taskmanager.service.concretes;
 
+import com.mert.taskmanager.core.exceptions.ResourceNotFoundException;
 import com.mert.taskmanager.dto.request.project.ProjectSaveRequest;
 import com.mert.taskmanager.dto.request.project.ProjectUpdateRequest;
 import com.mert.taskmanager.dto.response.ProjectResponse;
@@ -7,6 +8,7 @@ import com.mert.taskmanager.entity.Project;
 import com.mert.taskmanager.core.mapper.ProjectMapper;
 import com.mert.taskmanager.repository.ProjectRepo;
 import com.mert.taskmanager.service.abstracts.IProjectService;
+import com.mert.taskmanager.utils.Msg;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -41,14 +43,14 @@ public class ProjectManager implements IProjectService {
 
     @Override
     public ProjectResponse get(Long id) {
-        Project getProject=projectRepo.findById(id).orElseThrow(()->new EntityNotFoundException("Aranan proje bulunamadı"));
+        Project getProject=projectRepo.findById(id).orElseThrow(()->new ResourceNotFoundException(Msg.PROJECT_NOTFOUND));
         ProjectResponse projectResponse=projectMapper.toResponse(getProject);
         return  projectResponse;
     }
 
     @Override
     public ProjectResponse update(ProjectUpdateRequest projectUpdateRequest) {
-        Project oldProject=projectRepo.findById(projectUpdateRequest.getId()).orElseThrow(()->new  EntityNotFoundException("Güncellenecek proje bulunamaştır"));
+        Project oldProject=projectRepo.findById(projectUpdateRequest.getId()).orElseThrow(()->new ResourceNotFoundException(Msg.PROJECT_NOTFOUND));
         Project updatedProject= projectMapper.toEntity(projectUpdateRequest);
         updatedProject.setCreatedAt(oldProject.getCreatedAt());
         updatedProject.setTaskList(oldProject.getTaskList());
@@ -72,7 +74,7 @@ public class ProjectManager implements IProjectService {
 
     @Override
     public boolean delete(Long id) {
-        Project project=projectRepo.findById(id).orElseThrow(()->new EntityNotFoundException("Silinecek olan proje bulunamadı"));
+        Project project=projectRepo.findById(id).orElseThrow(()->new ResourceNotFoundException(Msg.PROJECT_NOTFOUND));
         projectRepo.delete(project);
         return true;
     }

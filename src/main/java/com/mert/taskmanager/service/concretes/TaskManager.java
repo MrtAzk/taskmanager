@@ -1,5 +1,6 @@
 package com.mert.taskmanager.service.concretes;
 
+import com.mert.taskmanager.core.exceptions.ResourceNotFoundException;
 import com.mert.taskmanager.dto.request.task.TaskSaveRequest;
 import com.mert.taskmanager.dto.request.task.TaskUpdateRequest;
 import com.mert.taskmanager.dto.response.TaskResponse;
@@ -9,6 +10,7 @@ import com.mert.taskmanager.core.mapper.TaskMapper;
 import com.mert.taskmanager.repository.ProjectRepo;
 import com.mert.taskmanager.repository.TaskRepo;
 import com.mert.taskmanager.service.abstracts.ITaskService;
+import com.mert.taskmanager.utils.Msg;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -37,7 +39,7 @@ public class TaskManager implements ITaskService {
     @Override
     public TaskResponse save(TaskSaveRequest taskSaveRequest) {
         Task saveTask = taskMapper.toEntity(taskSaveRequest);
-        Project project= projectRepo.findById(taskSaveRequest.getProjectId()).orElseThrow(()->new EntityNotFoundException("Proje Bulunamadı"));
+        Project project= projectRepo.findById(taskSaveRequest.getProjectId()).orElseThrow(()->new ResourceNotFoundException(Msg.TASK_PROJECT_NOTFOUND));
         saveTask.setProject(project);
         taskRepo.save(saveTask);
         TaskResponse taskResponse =taskMapper.toResponse(saveTask);
@@ -47,7 +49,7 @@ public class TaskManager implements ITaskService {
 
     @Override
     public TaskResponse get(Long id) {
-        Task getTask=taskRepo.findById(id).orElseThrow(()->new EntityNotFoundException("Aranan Task bulunamadı"));
+        Task getTask=taskRepo.findById(id).orElseThrow(()->new ResourceNotFoundException(Msg.TASK_NOTFOUND));
         TaskResponse taskResponse=taskMapper.toResponse(getTask);
         return  taskResponse;
     }
@@ -55,8 +57,8 @@ public class TaskManager implements ITaskService {
     @Override
     public TaskResponse update(TaskUpdateRequest taskUpdateRequest) {
         Task updatedTask=taskMapper.toEntity(taskUpdateRequest);
-        Task oldTask=taskRepo.findById(taskUpdateRequest.getId()).orElseThrow(()->new EntityNotFoundException("Update edilecek olan task bulunamadı"));
-        Project project=projectRepo.findById(taskUpdateRequest.getProjectId()).orElseThrow(()->new EntityNotFoundException("project bulunamadı"));
+        Task oldTask=taskRepo.findById(taskUpdateRequest.getId()).orElseThrow(()->new ResourceNotFoundException(Msg.TASK_NOTFOUND));
+        Project project=projectRepo.findById(taskUpdateRequest.getProjectId()).orElseThrow(()->new ResourceNotFoundException(Msg.TASK_PROJECT_NOTFOUND));
         updatedTask.setProject(project);
         taskRepo.save(updatedTask);
         TaskResponse taskResponse =taskMapper.toResponse(updatedTask);
@@ -67,7 +69,7 @@ public class TaskManager implements ITaskService {
     public Page<TaskResponse> findAll(int page, int pageSize,Long projectId) {
 
         if (projectId == null) {
-            throw new IllegalArgumentException("Project ID null olamaz backend ıd bekliyor .");
+            throw new IllegalArgumentException(Msg.VALIDATE_PROJECT_ID_NULL);
         }
         Pageable pageable = PageRequest.of(page,pageSize);
         Page<Task> taskPage = taskRepo.findByProjectId(projectId,pageable);
@@ -80,7 +82,7 @@ public class TaskManager implements ITaskService {
 
     @Override
     public boolean delete(Long id) {
-        Task deleteTask=taskRepo.findById(id).orElseThrow(()->new EntityNotFoundException("Silinecek Olan Id ye ait task bulunamadı"));
+        Task deleteTask=taskRepo.findById(id).orElseThrow(()->new ResourceNotFoundException(Msg.TASK_NOTFOUND));
         taskRepo.delete(deleteTask);
         return  true;
     }

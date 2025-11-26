@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 
@@ -27,5 +28,6 @@ public class TaskSaveRequest {
     private Long projectId;
     @NotNull
     @JsonFormat(pattern = "dd-MM-yyyy") //  Gün-Ay-Yıl Formatı
+    @DateTimeFormat(pattern = "dd-MM-yyyy")
     private LocalDate dueDate;
 }
