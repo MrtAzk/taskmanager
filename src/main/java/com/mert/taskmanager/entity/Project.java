@@ -31,4 +31,8 @@ public class Project {
     @OneToMany(mappedBy = "project",cascade = CascadeType.ALL)
     private List<Task> taskList;
 
+    @ManyToOne()
+    @JoinColumn(name = "user_id")
+    private User user;
+
 }

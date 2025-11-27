@@ -11,7 +11,6 @@ import org.mapstruct.Mapping;
 public interface TaskMapper {
 
     @Mapping(target = "id",ignore = true)
-
     @Mapping(target = "project",ignore = true)
     Task toEntity(TaskSaveRequest taskSaveRequest);
 

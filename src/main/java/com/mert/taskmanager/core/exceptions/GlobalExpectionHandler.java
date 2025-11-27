@@ -2,6 +2,7 @@ package com.mert.taskmanager.core.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -50,6 +51,36 @@ public class GlobalExpectionHandler {
         return   ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(errorResponse);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e, ServletWebRequest request) {
+        String path= request.getRequest().getRequestURI();
+        ErrorResponse errorResponse=ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN)
+                .message(e.getMessage())
+                .timestamp(LocalDateTime.now())
+                .path(path)
+                .build();
+        return  ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(errorResponse);
+    }
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex, ServletWebRequest request) {
+
+        String path = request.getRequest().getRequestURI();
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.UNAUTHORIZED) // 401 Unauthorized döndürüyoruz.
+                // Kullanıcıya şifrenin mi yoksa kullanıcının mı hatalı olduğunu söylemiyoruz (güvenlik kuralı)
+                .message("Kullanıcı adı veya şifre hatalı.")
+                .timestamp(LocalDateTime.now())
+                .path(path)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
     @ExceptionHandler(Exception.class)
     public  ResponseEntity<ErrorResponse> handleGeneralException(Exception e, ServletWebRequest request) {
