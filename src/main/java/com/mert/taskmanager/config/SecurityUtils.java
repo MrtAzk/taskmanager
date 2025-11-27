@@ -11,7 +11,7 @@ public class SecurityUtils {
         // 1. Authentication objesini çek
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // 2. Eğer kullanıcı login olmamışsa, null dönebiliriz.
+        // 2. Eğer kullanıcı login olmamışsa
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResourceNotFoundException("Kullanıcı oturumu bulunamadı.");
         }
