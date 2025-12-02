@@ -92,10 +92,10 @@ public class ProjectManager implements IProjectService {
 
 
         Pageable pageable = PageRequest.of(page,pageSize);
-        Page<Project> taskPage = projectRepo.findByUserId(currentUserId,pageable);
+        Page<Project> projectPage = projectRepo.findByUserId(currentUserId,pageable);
         List<ProjectResponse> projectResponseList=new ArrayList<>();
 
-        for (Project project :taskPage.getContent()){
+        for (Project project :projectPage.getContent()){
             projectResponseList.add(projectMapper.toResponse(project));
         }
 
