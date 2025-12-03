@@ -39,6 +39,7 @@ class ProjectManagerTest {
 
     @BeforeEach
     void setUp() {
+        //Yalancı nesneler diyelim bunlara taskmannager cosnturactırını lazım olam parametredeki nesneleri yaratıp taklit etmek için
         projectRepo = Mockito.mock(ProjectRepo.class);
         projectMapper = Mockito.mock(ProjectMapper.class);
 
