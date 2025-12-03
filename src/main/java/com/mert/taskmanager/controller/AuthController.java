@@ -4,14 +4,13 @@ import com.mert.taskmanager.dto.request.User.UserLoginRequest;
 import com.mert.taskmanager.dto.request.User.UserSignupRequest;
 import com.mert.taskmanager.dto.response.UserAuthResponse;
 import com.mert.taskmanager.service.abstracts.IUserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -40,9 +39,16 @@ public class AuthController {
         }
 
     @PostMapping("/login")
-    public ResponseEntity<UserAuthResponse> login(@Valid @RequestBody UserLoginRequest loginRequest) {
-        UserAuthResponse response = userService.login(loginRequest);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<UserAuthResponse> login(@Valid @RequestBody UserLoginRequest loginRequest, HttpServletResponse response) {
+        UserAuthResponse responseBody = userService.login(loginRequest,response);
+        return ResponseEntity.ok(responseBody);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserAuthResponse> getCurrentUser(HttpServletRequest request) {
+        UserAuthResponse userAuthResponse = userService.getCurrentUser(request);
+        return ResponseEntity.ok(userAuthResponse);
     }
+
+}
 

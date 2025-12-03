@@ -8,6 +8,9 @@ import com.mert.taskmanager.entity.User;
 import com.mert.taskmanager.repository.UserRepo;
 import com.mert.taskmanager.service.abstracts.IJwtService;
 import com.mert.taskmanager.service.abstracts.IUserService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -67,7 +70,7 @@ public class UserManager implements IUserService {
         return response;
     }
     @Override
-    public UserAuthResponse login(UserLoginRequest loginRequest) {
+    public UserAuthResponse login(UserLoginRequest loginRequest, HttpServletResponse response) {
 
 
         // 1. AuthenticationManager.authenticate() çağrısı buraya gelir.
@@ -78,13 +81,59 @@ public class UserManager implements IUserService {
                 )
         );
 
+
         // 2. Token üretimi ve response hazırlama buraya taşınır.
         User user = (User) authentication.getPrincipal();
         String token = jwtService.generateToken(user);
 
-        UserAuthResponse response = userMapper.toAuthResponse(user);
-        response.setToken(token);
+        // 2. 🚀 KRİTİK: JWT'yi HttpOnly Cookie içine set et!
+        Cookie cookie = new Cookie("jwt-token", token);
+        cookie.setHttpOnly(true);       // 🛡️ JS erişimini (XSS riskini) engeller!
+        cookie.setSecure(false);        // Geliştirme aşaması için false kalsın (HTTPS zorunluluğu olmasın)
+        cookie.setPath("/");
+        cookie.setMaxAge(24 * 60 * 60);
 
-        return response;
+        response.addCookie(cookie);
+
+        UserAuthResponse authResponse = userMapper.toAuthResponse(user);
+        authResponse.setToken(null);//Cookiden gidecek token
+
+        return authResponse;
+    }
+    @Override
+    public UserAuthResponse getCurrentUser(HttpServletRequest request) {
+
+        // 1. Cookie’lerden token’ı al
+        String token = null;
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("jwt-token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                }
+            }
+        }
+
+        if (token == null) {
+            throw new RuntimeException("Token bulunamadı (cookie boş)");
+        }
+
+        // 2. Token geçerli mi?
+        String email = jwtService.extractUsername(token);
+        if (email == null || email.isEmpty()) {
+            throw new RuntimeException("Token geçersiz");
+        }
+
+        // 3. Veritabanından user çek
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı"));
+
+        // 4. Token’ın kullanıcıya ait olup olmadığını validate et
+        if (!jwtService.isTokenValid(token, user)) {
+            throw new RuntimeException("Token user için geçersiz");
+        }
+
+        UserAuthResponse authResponse = userMapper.toAuthResponse(user);
+
+        return authResponse ;
     }
 }

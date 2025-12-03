@@ -4,10 +4,14 @@ import com.mert.taskmanager.service.abstracts.IJwtService;
 import io.jsonwebtoken.Claims;
 
 
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +46,7 @@ public class JwtManager implements IJwtService {
     }
 
 
+
     @Override
     public Key getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
@@ -51,12 +56,30 @@ public class JwtManager implements IJwtService {
     // Token'ın imzasını doğrular ve içindeki tüm verileri (Claims) çeker.//Eski methodlar ama yapcak bişey yok bende parserBuidler çıkmıyor
     @Override
     public Claims extractAllClaims(String token) {
-        return  Jwts
-                .parser()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            // 🚀 KORUNAN ZİNCİR: Senin projenin gerektirdiği tek API zinciri budur.
+            return Jwts.parser()
+                    .setSigningKey(getSigningKey())
+                    .build() // Build metodunu tutuyoruz (Senin ortamına özel)
+                    .parseClaimsJws(token)
+                    .getBody();
+
+        } catch (ExpiredJwtException ex) {
+            // 1. Token süresi dolduğunda yakala
+            throw new AuthenticationException("Token süresi dolmuştur. Lütfen tekrar giriş yapın.") {};
+
+        } catch (SignatureException | MalformedJwtException ex) {
+            // 2. İmza geçersizse veya token formatı bozuksa (Sahte Token)
+            throw new AuthenticationException("Geçersiz veya bozuk JWT token'ı.", ex) {};
+
+        } catch (AuthenticationException ex) {
+            // 3. Zaten bir AuthenticationException fırlatılmışsa, onu tekrar fırlat.
+            throw ex;
+
+        } catch (Exception ex) {
+            // 4. Diğer bilinmeyen hatalar (I/O, Parse hatası vb.)
+            throw new RuntimeException("JWT işlenirken beklenmeyen hata oluştu.", ex);
+        }
     }
 
 
@@ -76,5 +99,6 @@ public class JwtManager implements IJwtService {
         // Token'daki email, UserDetails'teki ile eşleşmeli VE süresi dolmamış olmalıdır.
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
+
 
 }

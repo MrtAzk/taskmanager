@@ -7,6 +7,7 @@ import com.mert.taskmanager.dto.response.UserAuthResponse;
 import com.mert.taskmanager.entity.User;
 import com.mert.taskmanager.repository.UserRepo;
 import com.mert.taskmanager.service.abstracts.IJwtService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -26,6 +27,7 @@ class UserManagerTest {
     private  PasswordEncoder passwordEncoder;
     private  AuthenticationManager authenticationManager;
     private  IJwtService jwtService;
+    private HttpServletResponse response ;
 
     @BeforeEach
     void setUp() {
@@ -34,6 +36,7 @@ class UserManagerTest {
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
         authenticationManager = Mockito.mock(AuthenticationManager.class);
         jwtService = Mockito.mock(IJwtService.class);
+
         userManager = new UserManager(userRepo,userMapper,passwordEncoder,authenticationManager,jwtService);
 
     }
@@ -99,10 +102,12 @@ class UserManagerTest {
         Mockito.when(jwtService.generateToken(user)).thenReturn(token);
         Mockito.when(userMapper.toAuthResponse(user)).thenReturn(userAuthResponse);
 
-        UserAuthResponse response = userManager.login(userLoginRequest);
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+        UserAuthResponse actualResponse = userManager.login(userLoginRequest, response);
+
         assertNotNull(response);
-        assertEquals(userAuthResponse.getEmail(),response.getEmail());
-        assertEquals(userAuthResponse.getToken(),response.getToken());
+        assertEquals(userAuthResponse.getEmail(),actualResponse.getEmail());
+        assertEquals(userAuthResponse.getToken(),actualResponse.getToken());
 
         Mockito.verify(userMapper).toAuthResponse(user);
         Mockito.verify(jwtService).generateToken(user);

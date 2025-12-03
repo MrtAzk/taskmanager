@@ -5,6 +5,7 @@ import com.mert.taskmanager.service.abstracts.IJwtService;
 import com.mert.taskmanager.service.abstracts.IUserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -34,56 +35,66 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
+        // 💡 Token'ı tek bir yerde tutacak değişken.
+        String jwt = null;
         final String userEmail;
-        //Gelen URI'dan Context Path'i çıkararak sadece Controller yolunu al.yani api yolu işte
-        String requestUri = request.getRequestURI();
-        String contextPath = request.getContextPath();
-        // Context Path'i çıkar
-        String path = requestUri.substring(contextPath.length());
 
+        // 1. 🚀 ÖNCELİK: HttpOnly Çerezleri Kontrol Et (Güvenli Yol)
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("jwt-token".equals(cookie.getName())) {
+                    jwt = cookie.getValue();
+                    break;
+                }
+            }
+        }
 
+        // 2. YEDEK KONTROL: Eğer çerezde yoksa, Authorization Header'a bak (Postman/Mobil için)
+        if (jwt == null) {
+            final String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                // Token'ı al ve boşlukları temizle.
+                jwt = authHeader.substring(7).trim();
+            }
+        }
 
-        // 1. JWT Kontrolü: Header yoksa veya "Bearer " ile başlamıyorsa devam et
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // 3. Token bulunamazsa (ne çerezde ne de header'da), filtreden geç.
+        // Bu, isteğin Controller'a ulaşmasını sağlar (SecurityConfig'deki permitAll() izin veriyorsa).
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2. Token'ı al (7 karakter atla: "Bearer ")
-        jwt = authHeader.substring(7);
+        // --- TOKEN BULUNDU, DOĞRULAMA BAŞLANGIÇ ---
 
-        // 3. Email'i token'dan çek
+        // 4. Email'i token'dan çek.
         userEmail = jwtService.extractUsername(jwt);
 
-        // 4. Kullanıcı Context'te değilse ve Email çekilebildiyse devam et
+        // 5. Kullanıcı Context'te değilse ve Email çekilebildiyse devam et
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // 5. Email ile UserDetails'i DB'den çek (loadUserByUsername)
+            // 6. UserDetails'i DB'den çek
             UserDetails userDetails = this.userService.loadUserByUsername(userEmail);
 
-            // 6. Token'ı doğrula
+            // 7. Token'ı doğrula
             if (jwtService.isTokenValid(jwt, userDetails)) {
 
-                // 7. Token geçerliyse, kullanıcıyı Context'e yerleştir (Login yap)
+                // 8. Token geçerliyse, kullanıcıyı Context'e yerleştir (Login yap)
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
-                        null, // JWT kullandığımız için parola null bırakılır
-                        userDetails.getAuthorities() // Kullanıcı rolleri/yetkileri
+                        null,
+                        userDetails.getAuthorities()
                 );
 
-                // İstek detaylarını token'a ekle
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
 
-                // Spring Security Context'ini güncelle: Kullanıcı artık kimlik doğrulandı!
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 
-        // 8. Filtre zincirine devam et (İsteği hedefine ulaştır)
+        // 9. Filtre zincirine devam et.
         filterChain.doFilter(request, response);
     }
 }
